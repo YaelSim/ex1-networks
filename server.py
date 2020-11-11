@@ -3,8 +3,8 @@ import socket
 from datetime import datetime
 
 
-
 def main():
+    run = True
     port = sys.argv[1]
     ip_parent = sys.argv[2]
     parent_port = sys.argv[3]
@@ -36,7 +36,7 @@ def main():
     n=1
     """
 
-    while True:
+    while run:
         flag = 0
         data, addr = client_socket.recvfrom(1024)
         data = data.decode()  # check if needed.
@@ -68,13 +68,15 @@ def main():
             ips_dict[data] = first_add, second_add, third_add
             reply = ips_dict[data][0]
             client_socket.sendto(reply.encode, addr)
-
+    client_socket.close()
+    parent_socket.close()
 
 
 def is_this_entry_relevant(ttl, remaining_time):
     remaining_time = datetime.strptime(remaining_time, '%Y-%m-%d %H:%M:%S.%f')  # convert str to datetime.
     result = (datetime.now() - remaining_time).total_seconds()
     return result < float(ttl)
+
 
 def update_file(file_name, dict):
     with open(file_name, 'w') as file:
