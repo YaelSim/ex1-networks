@@ -20,6 +20,7 @@ def main():
         lines = lines.split(",")
         # the time - alive remaining from the ttl.
         lines.append(datetime(1, 1, 1, 1, 1, 1))  # initial time.
+        lines.append("0")  # if its 0 - from ips.txt, don't consider ttl
         ips_list.append(lines)
 
     ips_dict = {x[0]: x[1:] for x in ips_list}  # convert the list of lists to dictionary
@@ -40,18 +41,15 @@ def main():
         flag = 0
         data, addr = client_socket.recvfrom(1024)
         data = data.decode()  # check if needed.
-        # is_in_list = any(data in sublist for sublist in ips_list)
-        # if true -> return its ip address. o.w- ask the parent for it
-        # todo check what to do with TTL later. **************************
 
         if data in ips_dict:
             desired_ip = ips_dict[data][0]
             desired_ttl = ips_dict[data][1]
             ips_dict[data][2] = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
             # if the ttl not finished then we can sent the entry to the client, o.w we need to ask parent
-            if is_this_entry_relevant(desired_ttl, ips_dict[data][2]):
+            if is_this_entry_relevant(desired_ttl, ips_dict[data][2], ips_dict[data][3]):
                 # check if encode is neede*****
-                client_socket.sendto(desired_ip.encode,addr)
+                client_socket.sendto(desired_ip.encode, addr)
             else:
                 # chaeck if need to delete********
                 flag = 1
@@ -65,14 +63,19 @@ def main():
             # add to dictionary
             first_add, second_add = parent_data.split(',')
             third_add = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
-            ips_dict[data] = first_add, second_add, third_add
+            fourth_add = "1"  # because this entry come from parent
+            ips_dict[data] = first_add, second_add, third_add, fourth_add
             reply = ips_dict[data][0]
             client_socket.sendto(reply.encode, addr)
     client_socket.close()
     parent_socket.close()
 
 
-def is_this_entry_relevant(ttl, remaining_time):
+def is_this_entry_relevant(ttl, remaining_time, is_from_parent):
+    if is_from_parent == "0":
+        # that means this entry is from txt
+        return True
+    # else - we check the ttl
     remaining_time = datetime.strptime(remaining_time, '%Y-%m-%d %H:%M:%S.%f')  # convert str to datetime.
     result = (datetime.now() - remaining_time).total_seconds()
     return result < float(ttl)
