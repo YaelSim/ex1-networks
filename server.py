@@ -25,48 +25,37 @@ def main():
 
     ips_dict = {x[0]: x[1:] for x in ips_list}  # convert the list of lists to dictionary
 
-    """
-    data = "fuc34534545fuckingfuckingfuck"
-    if data in ips_dict:
-        desired_ip = ips_dict[data][0]
-        desired_ttl = ips_dict[data][1]
-        ips_dict[data][2] = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
-        i = is_this_entry_relevant(desired_ttl, ips_dict[data][2])
-    ips_dict[data] = "yael", "linoy"
-    update_file(ips_file, ips_dict)
-    n=1
-    """
-
     while run:
         flag = 0
         data, addr = client_socket.recvfrom(1024)
-        data = data.decode()  # check if needed.
+        data = data.decode()
 
         if data in ips_dict:
             desired_ip = ips_dict[data][0]
             desired_ttl = ips_dict[data][1]
+            ip_and_ttl_reply = desired_ip + "," + desired_ttl
             ips_dict[data][2] = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
             # if the ttl not finished then we can sent the entry to the client, o.w we need to ask parent
             if is_this_entry_relevant(desired_ttl, ips_dict[data][2], ips_dict[data][3]):
-                # check if encode is neede*****
-                client_socket.sendto(desired_ip.encode, addr)
+                client_socket.sendto(ip_and_ttl_reply.encode(), addr)
+                update_file(ips_file, ips_dict)
             else:
-                # chaeck if need to delete********
                 flag = 1
         else:
             flag = 1
 
         if flag == 1:  # need to communicate with parent server tp get the entry
-            parent_socket.sendto(data.encode(), (ip_parent, parent_port))
+            parent_socket.sendto(data.encode(), (ip_parent, int(parent_port)))
             parent_data, parent_add = parent_socket.recvfrom(1024)  # receive answer from parent
             parent_data = parent_data.decode()
             # add to dictionary
-            first_add, second_add = parent_data.split(',')
+            first_add, second_add = parent_data.split(',')  #ip and ttl accordingly.
             third_add = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
             fourth_add = "1"  # because this entry come from parent
             ips_dict[data] = first_add, second_add, third_add, fourth_add
-            reply = ips_dict[data][0]
-            client_socket.sendto(reply.encode, addr)
+            reply = ips_dict[data][0] + "," + ips_dict[data][1]
+            client_socket.sendto(reply.encode(), addr)
+            update_file(ips_file, ips_dict)
     client_socket.close()
     parent_socket.close()
 
@@ -81,14 +70,25 @@ def is_this_entry_relevant(ttl, remaining_time, is_from_parent):
     return result < float(ttl)
 
 
-def update_file(file_name, dict):
+def update_file(file_name, dic):
     with open(file_name, 'w') as file:
         file.truncate()  # delete all file content.
-        for name in dict:
-            ip_address = dict[name][0]
-            ttl = dict[name][1]
-            str = name + "," + ip_address + "," + ttl + "\n"
-            file.write(str)
+        for name in dic:
+            ip_address = dic[name][0]
+            ttl = dic[name][1]
+            remaining = dic[name][2]
+            parent_flag = dic[name][3]
+            if not is_this_entry_relevant(ttl, remaining, parent_flag):
+                continue
+            str_write = name + "," + ip_address + "," + ttl + "\n"
+            file.write(str_write)    
+        for name in list(dic.keys()):
+            ip_address = dic[name][0]
+            ttl = dic[name][1]
+            remaining = dic[name][2]
+            parent_flag = dic[name][3]
+            if not is_this_entry_relevant(ttl, remaining, parent_flag):
+                del dic[name]
 
 
 if __name__ == "__main__":
