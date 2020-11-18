@@ -9,7 +9,7 @@ def main():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     while run:
         massage = input().encode()
-        server_socket.sendto(massage, (server_ip, int(server_port))  # send massage to server
+        server_socket.sendto(massage, (server_ip, int(server_port)))  # send massage to server
         data, addr = server_socket.recvfrom(1024)  # receive answer from server
         data = data.decode()
         ip, ttl = data.split(',')
