@@ -34,7 +34,6 @@ def main():
             desired_ip = ips_dict[data][0]
             desired_ttl = ips_dict[data][1]
             ip_and_ttl_reply = desired_ip + "," + desired_ttl
-            ips_dict[data][2] = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
             # if the ttl not finished then we can sent the entry to the client, o.w we need to ask parent
             if is_this_entry_relevant(desired_ttl, ips_dict[data][2], ips_dict[data][3]):
                 client_socket.sendto(ip_and_ttl_reply.encode(), addr)
